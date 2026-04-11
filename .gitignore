@@ -1,0 +1,39 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+venv/
+env/
+.venv/
+build/
+dist/
+*.egg-info/
+*.spec
+
+# User data (kept in project folder per NAS portable policy)
+config.json
+settings.json
+puzzles_history.json
+crash_reports/
+logs/
+
+# LaTeX temp
+*.aux
+*.log
+*.toc
+*.out
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+*.tex
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE
+.vscode/
+.idea/
+*.swp
