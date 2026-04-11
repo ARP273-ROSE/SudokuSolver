@@ -48,8 +48,14 @@ Puzzles are generated with rotational symmetry and guaranteed unique solutions.
 - Bilingual FR/EN (auto-detected from system locale, switchable at runtime)
 - Every widget has a bilingual tooltip
 
+### Robustness
+- Generator and solver run in background threads — the UI never freezes
+- Worker lifecycle handled defensively (no dangling Qt references, no "wrapped C++ object deleted" errors on repeated clicks)
+- Uncaught exceptions write anonymised JSON crash reports (usernames and home paths stripped)
+- Solver capped at 2 million search nodes to guarantee bounded worst-case effort
+
 ### Built-in learning guide
-The **Help → Solving techniques** menu opens a full bilingual catalogue explaining each technique with examples.
+The **Help → Solving techniques** menu opens a full bilingual catalogue explaining each technique with examples. A standalone **`guide_techniques.pdf`** and **`manuel.pdf`** (user manual) are shipped alongside the source.
 
 ---
 
