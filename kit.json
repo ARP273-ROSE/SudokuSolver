@@ -1,0 +1,39 @@
+{
+  "nom_technique": "sudokusolver",
+  "nom_fichier": "SudokuSolver",
+  "nom_affiche": "Sudoku",
+  "depot_distribution": "ARP273-ROSE/SudokuSolver",
+  "point_entree": "main.py",
+  "fichier_version": "VERSION",
+  "icone": "logo.ico",
+  "appid": "{{6EAFC7DF-5AA1-5482-81B2-7A40BC169222}",
+  "modules": [
+    "main.py",
+    "i18n.py",
+    "crash_handler.py",
+    "reporting.py",
+    "updater.py"
+  ],
+  "paquets": [
+    "gui",
+    "sudoku"
+  ],
+  "assets": [
+    "VERSION",
+    "logo.ico",
+    "logo.png",
+    "logo_64.png",
+    "README.md",
+    "LICENSE",
+    "guide_techniques.pdf"
+  ],
+  "requirements": "requirements.txt",
+  "pip": [],
+  "binaires": [],
+  "fichiers_proteges": [],
+  "verification_import": [
+    "gui",
+    "sudoku",
+    "i18n"
+  ]
+}
