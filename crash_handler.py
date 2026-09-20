@@ -19,6 +19,7 @@ from pathlib import Path
 
 
 PROJECT_DIR = Path(__file__).resolve().parent
+_fichier_faulthandler = None
 CRASH_DIR = PROJECT_DIR / "crash_reports"
 MAX_REPORTS = 50  # keep only the newest N reports
 
@@ -99,9 +100,62 @@ def _excepthook(exc_type, exc_value, exc_tb) -> None:
         sys.__excepthook__(exc_type, exc_value, exc_tb)
         return
     report = _write_report(exc_type, exc_value, exc_tb)
+    # Le rapport part maintenant, tant que le processus vit encore ; s'il
+    # n'aboutit pas il est mis en file et repartira au demarrage suivant.
+    try:
+        import traceback as _tb
+        import reporting
+        reporting.signaler_plantage(
+            ''.join(_tb.format_exception(exc_type, exc_value, exc_tb)))
+    except Exception:
+        pass
     _show_dialog(exc_value, report)
     sys.__excepthook__(exc_type, exc_value, exc_tb)
 
 
+def dossier_donnees() -> Path:
+    """Ou vivent rapports et reglages.
+
+    Dans le paquet installe, le dossier du programme peut etre en lecture
+    seule selon l'endroit choisi : on prend donc %LOCALAPPDATA%. En
+    developpement, on reste a cote du code, plus commode a inspecter.
+    """
+    if (PROJECT_DIR.parent / 'python' / 'python.exe').exists():
+        base = Path(os.environ.get('LOCALAPPDATA', Path.home())) / 'SudokuSolver'
+    else:
+        base = PROJECT_DIR
+    try:
+        base.mkdir(parents=True, exist_ok=True)
+    except OSError:
+        base = Path.home()
+    return base
+
+
 def install() -> None:
     sys.excepthook = _excepthook
+
+    # Remontee d'incidents. Une faute de segmentation dans Qt ne passe pas par
+    # excepthook : l'application disparait sans un mot. faulthandler ecrit la
+    # pile avant la mort, et on la releve au demarrage suivant.
+    dossier = dossier_donnees()
+    trace_native = dossier / '_crash_natif.log'
+    try:
+        import faulthandler
+        global _fichier_faulthandler
+        _fichier_faulthandler = open(trace_native, 'w', encoding='utf-8')
+        faulthandler.enable(file=_fichier_faulthandler, all_threads=True)
+    except Exception:
+        pass
+    try:
+        import reporting
+        version = ''
+        for base in (PROJECT_DIR, PROJECT_DIR.parent):
+            fichier = base / 'VERSION'
+            if fichier.exists():
+                version = fichier.read_text(encoding='utf-8').strip()
+                break
+        reporting.init(dossier, application='sudokusolver', version=version)
+        reporting.relever_crash_natif(trace_native)
+        reporting.reprendre_file_en_fond()
+    except Exception:
+        pass
