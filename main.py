@@ -20,7 +20,7 @@ from gui.main_window import MainWindow  # noqa: E402
 def main() -> int:
     app = QApplication(sys.argv)
     app.setApplicationName("SudokuSolver")
-    app.setOrganizationName("Kevin")
+    app.setOrganizationName("ARP273-ROSE")  # aucun réglage QSettings : sans effet sur les données
     app.setQuitOnLastWindowClosed(True)
 
     icon_path = Path(__file__).resolve().parent / "logo.png"

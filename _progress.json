@@ -98,7 +98,7 @@
   "known_limitations": [
     "Generator may retry up to 40 times then fall back to closest difficulty match (rare on Expert)",
     "Imported puzzles needing techniques beyond X-Wing fall back to backtracking for the hint engine",
-    "No auto-update mechanism yet (unlike Kevin's other desktop apps)"
+    "No auto-update mechanism yet (unlike the other ARP273-ROSE desktop apps)"
   ],
 
   "todo_backlog": [
@@ -112,7 +112,7 @@
   ],
 
   "files_not_in_git": [
-    "manuel.tex (LaTeX source — only .pdf is committed per Kevin's rule)",
+    "manuel.tex (LaTeX source — only .pdf is committed by project rule)",
     "guide_techniques.tex (same)",
     "crash_reports/ (user data)",
     "logs/ (user data)",
