@@ -10,10 +10,15 @@ from functools import wraps
 from pathlib import Path
 from typing import Callable
 
-from PyQt6.QtCore import Qt, QThread, pyqtSignal
-from PyQt6.QtGui import QAction, QActionGroup, QIcon
+from PyQt6.QtCore import Qt, QThread, QTimer, QUrl, pyqtSignal
+from PyQt6.QtGui import QAction, QActionGroup, QDesktopServices, QIcon
 from PyQt6.QtWidgets import (
+    QApplication,
     QComboBox,
+    QDialog,
+    QDialogButtonBox,
+    QPlainTextEdit,
+    QProgressDialog,
     QFileDialog,
     QHBoxLayout,
     QLabel,
@@ -25,7 +30,8 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from i18n import T, detect_language, get_language, set_language
+from crash_handler import dossier_donnees
+from i18n import T, get_language, save_language, set_language, startup_language
 from sudoku import (
     Board,
     Difficulty,
@@ -42,7 +48,8 @@ from .help_dialog import show_howto, show_techniques
 
 PROJECT_DIR = Path(__file__).resolve().parent.parent
 MAX_PUZZLE_FILE_BYTES = 10 * 1024  # 10 KB — any sudoku file is <200 bytes
-LOG_DIR = PROJECT_DIR / "logs"
+# Journal hors du dossier du programme, que la mise à jour remplace
+LOG_DIR = dossier_donnees() / "logs"
 LOG_FILE = LOG_DIR / "sudoku.log"
 
 log = logging.getLogger("SudokuSolver")
@@ -51,7 +58,7 @@ log = logging.getLogger("SudokuSolver")
 def _setup_logging() -> None:
     try:
         import logging.handlers
-        LOG_DIR.mkdir(exist_ok=True)
+        LOG_DIR.mkdir(parents=True, exist_ok=True)
         handler = logging.handlers.RotatingFileHandler(
             LOG_FILE, maxBytes=200_000, backupCount=2, encoding="utf-8"
         )
@@ -99,7 +106,7 @@ def _guarded(fn: Callable) -> Callable:
         except Exception as exc:
             log.exception("Error in %s", fn.__name__)
             try:
-                self.status.showMessage(f"Error: {exc}")
+                self.status.showMessage(T("error", error=exc))
                 QMessageBox.warning(
                     self, T("app_title"), f"{type(exc).__name__}: {exc}"
                 )
@@ -158,9 +165,14 @@ class SolveWorker(QThread):
 
 
 class MainWindow(QMainWindow):
+    # résultat de la recherche de mise à jour, émis depuis un fil de fond
+    _upd_result = pyqtSignal(object, bool)
+
     def __init__(self):
         super().__init__()
-        set_language(detect_language())
+        # le choix du menu Langue, sinon la langue du système
+        set_language(startup_language())
+        self._upd_result.connect(self._on_update_result)
 
         self.version = _read_version()
         self.original_board: Board = Board()
@@ -313,6 +325,21 @@ class MainWindow(QMainWindow):
         self.act_techniques.triggered.connect(lambda: show_techniques(self))
         self.menu_help.addAction(self.act_techniques)
         self.menu_help.addSeparator()
+        self.act_update = QAction(self)
+        self.act_update.triggered.connect(lambda: self._check_update(manual=True))
+        self.menu_help.addAction(self.act_update)
+        self.act_report = QAction(self)
+        self.act_report.triggered.connect(self._on_report)
+        self.menu_help.addAction(self.act_report)
+        self.act_autoreport = QAction(self, checkable=True)
+        try:
+            import reporting
+            self.act_autoreport.setChecked(reporting.consentement() is True)
+        except Exception:
+            pass
+        self.act_autoreport.toggled.connect(self._set_auto_report)
+        self.menu_help.addAction(self.act_autoreport)
+        self.menu_help.addSeparator()
         self.act_about = QAction(self)
         self.act_about.triggered.connect(self._on_about)
         self.menu_help.addAction(self.act_about)
@@ -371,12 +398,16 @@ class MainWindow(QMainWindow):
         self.menu_help.setTitle(T("menu_help"))
         self.act_help_show.setText(T("menu_help_show"))
         self.act_techniques.setText(T("menu_techniques"))
+        self.act_update.setText(T("menu_update"))
+        self.act_report.setText(T("menu_report"))
+        self.act_autoreport.setText(T("menu_autoreport"))
         self.act_about.setText(T("menu_about"))
 
         self.status.showMessage(T("status_ready"))
 
     def _set_lang(self, lang: str) -> None:
         set_language(lang)
+        save_language(lang)
         self._retranslate()
 
     # ---- Actions ----
@@ -460,7 +491,7 @@ class MainWindow(QMainWindow):
 
     def _on_worker_failed(self, message: str) -> None:
         log.error("Worker failed: %s", message)
-        self.status.showMessage(f"Error: {message}")
+        self.status.showMessage(T("error", error=message))
         self.btn_new.setEnabled(True)
         self.btn_solve.setEnabled(True)
 
@@ -598,8 +629,8 @@ class MainWindow(QMainWindow):
         path, _ = QFileDialog.getOpenFileName(
             self,
             T("menu_open"),
-            str(PROJECT_DIR),
-            "Sudoku (*.sdk *.txt);;All files (*.*)",
+            str(Path.home()),
+            T("file_filter_open"),
         )
         if not path:
             return
@@ -614,7 +645,7 @@ class MainWindow(QMainWindow):
             QMessageBox.critical(
                 self,
                 T("app_title"),
-                f"File too large ({size} bytes). Max: {MAX_PUZZLE_FILE_BYTES}.",
+                T("file_too_large", size=size, max=MAX_PUZZLE_FILE_BYTES),
             )
             return
         try:
@@ -640,8 +671,8 @@ class MainWindow(QMainWindow):
         path, _ = QFileDialog.getSaveFileName(
             self,
             T("menu_save"),
-            str(PROJECT_DIR / "puzzle.sdk"),
-            "Sudoku (*.sdk);;Text (*.txt)",
+            str(Path.home() / "puzzle.sdk"),
+            T("file_filter_save"),
         )
         if not path:
             return
@@ -659,6 +690,210 @@ class MainWindow(QMainWindow):
             T("about_title"),
             T("about_body", version=self.version),
         )
+
+    # ---- Mise à jour (kit commun : updater.py) ----
+    # Paquet installé (Windows, macOS, Linux) : l'archive de la Release est
+    # déballée dans app/, puis l'application redémarre. Depuis les sources,
+    # on ouvre seulement la page de téléchargement.
+
+    def _check_update(self, manual: bool = False) -> None:
+        """Interroge GitHub dans un fil séparé, sans bloquer l'interface."""
+        import threading
+        if manual:
+            self.status.showMessage(T("update_checking"))
+
+        def _worker():
+            try:
+                import updater
+                info = updater.check(self.version)
+            except Exception:                 # ne jamais faire tomber l'app
+                info = None
+            self._upd_result.emit(info, manual)
+
+        self._upd_thread = threading.Thread(target=_worker, daemon=True,
+                                            name="sudoku-maj")
+        self._upd_thread.start()
+
+    def _on_update_result(self, info, manual: bool) -> None:
+        if not info:
+            self.status.showMessage(T("status_ready"))
+            if manual:
+                QMessageBox.information(self, T("update_title"),
+                                        T("update_uptodate", current=self.version))
+            return
+        try:
+            import updater
+            installe = bool(updater.is_packaged())
+            page = f"https://github.com/{updater.REPO}/releases/latest"
+        except Exception:
+            installe, page = False, ""
+        box = QMessageBox(self)
+        box.setWindowTitle(T("update_title"))
+        box.setText(T("update_available", version=info["version"], current=self.version))
+        notes = (info.get("notes") or "").strip()
+        try:
+            import updater as _upd
+            # les notes publiées portent les deux langues ; on ne montre que
+            # celle de l'interface
+            notes = _upd.notes_dans_la_langue(notes, get_language()).strip()
+        except Exception:
+            pass
+        if notes:
+            box.setDetailedText(notes[:4000])
+        if installe:
+            oui = box.addButton(T("update_install"), QMessageBox.ButtonRole.AcceptRole)
+        else:
+            box.setInformativeText(T("update_sources"))
+            oui = box.addButton(T("update_open_page"), QMessageBox.ButtonRole.AcceptRole)
+        box.addButton(T("update_later"), QMessageBox.ButtonRole.RejectRole)
+        box.exec()
+        if box.clickedButton() is not oui:
+            return
+        if not installe:
+            if page:
+                QDesktopServices.openUrl(QUrl(page))
+            return
+        self._download_update(info)
+
+    def _download_update(self, info: dict) -> None:
+        """Télécharge et pose l'archive dans un fil de fond. Le fil ne touche
+        jamais Qt : il écrit dans un dict qu'un QTimer relit à 10 Hz."""
+        import threading
+        import updater
+        dlg = QProgressDialog(T("update_downloading"), None, 0, 100, self)
+        dlg.setWindowTitle(T("update_title"))
+        dlg.setWindowModality(Qt.WindowModality.WindowModal)
+        dlg.setCancelButton(None)
+        dlg.setMinimumDuration(0)
+        etat = {"fait": 0, "total": 0, "fini": False, "erreur": None, "pose": False}
+
+        def _progress(done, total):
+            etat["fait"], etat["total"] = done, total
+
+        def _worker():
+            try:
+                etat["pose"] = bool(updater.download_and_apply(info, progress=_progress))
+            except Exception as exc:
+                etat["erreur"] = exc
+            finally:
+                etat["fini"] = True
+
+        threading.Thread(target=_worker, daemon=True, name="sudoku-maj-pose").start()
+        poll = QTimer(self)
+        poll.setInterval(100)
+
+        def _tick():
+            if not etat["fini"]:
+                if etat["total"] > 0:
+                    dlg.setValue(min(99, etat["fait"] * 100 // etat["total"]))
+                return
+            poll.stop()
+            dlg.close()
+            err = etat["erreur"]
+            if err is not None or not etat["pose"]:
+                texte = str(err) if err is not None else "archive"
+                verrouille = (isinstance(err, PermissionError)
+                              or "WinError 32" in texte
+                              or "used by another process" in texte
+                              or "utilisé par un autre processus" in texte)
+                QMessageBox.warning(self, T("update_title"),
+                                    T("update_locked") if verrouille
+                                    else T("update_failed", error=texte))
+                return
+            QMessageBox.information(self, T("update_title"), T("update_restart"))
+            try:
+                updater.restart()
+            finally:
+                QApplication.quit()
+
+        poll.timeout.connect(_tick)
+        poll.start()
+        self._upd_poll = poll
+
+    # ---- Rapports de problème (kit commun : reporting.py) ----
+
+    def ask_report_consent(self) -> None:
+        """Au premier lancement : demander l'accord pour l'envoi automatique
+        des rapports, puis signaler l'installation ou le démarrage du jour."""
+        try:
+            import reporting
+            premier = reporting.consentement() is None
+            if premier:
+                box = QMessageBox(self)
+                box.setWindowTitle(T("app_title"))
+                box.setIcon(QMessageBox.Icon.Question)
+                box.setText(T("consent_title"))
+                box.setInformativeText(T("consent_text"))
+                oui = box.addButton(T("consent_yes"), QMessageBox.ButtonRole.AcceptRole)
+                box.addButton(T("consent_no"), QMessageBox.ButtonRole.RejectRole)
+                box.exec()
+                reporting.definir_consentement(box.clickedButton() is oui)
+                self.act_autoreport.setChecked(reporting.consentement() is True)
+            reporting.signaler_demarrage(premier=premier)
+        except Exception:
+            pass
+
+    def _set_auto_report(self, on: bool) -> None:
+        try:
+            import reporting
+            reporting.definir_consentement(bool(on))
+        except Exception:
+            pass
+
+    @_guarded
+    def _on_report(self) -> None:
+        """Signalement écrit, transmis au point de collecte avec l'état de la
+        partie. Repli : un .zip sur le Bureau si le réseau manque."""
+        import reporting
+        dlg = QDialog(self)
+        dlg.setWindowTitle(T("report_title"))
+        dlg.resize(520, 360)
+        form = QVBoxLayout(dlg)
+        form.addWidget(QLabel(T("report_prompt")))
+        texte = QPlainTextEdit()
+        texte.setPlaceholderText(T("report_placeholder"))
+        form.addWidget(texte)
+        note = QLabel(T("report_note"))
+        note.setWordWrap(True)
+        note.setStyleSheet("color: gray;")
+        form.addWidget(note)
+        btns = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok
+                                | QDialogButtonBox.StandardButton.Cancel)
+        btns.button(QDialogButtonBox.StandardButton.Ok).setText(T("report_send"))
+        btns.button(QDialogButtonBox.StandardButton.Cancel).setText(T("report_cancel"))
+        form.addWidget(btns)
+        btns.accepted.connect(dlg.accept)
+        btns.rejected.connect(dlg.reject)
+        if dlg.exec() != QDialog.DialogCode.Accepted:
+            return
+        description = texte.toPlainText().strip()
+        if not description:
+            QMessageBox.information(self, T("report_title"), T("report_empty"))
+            return
+        # Un signalement écrit à la main est toujours transmis : on vient de
+        # demander qu'on le lise. L'accord ne gouverne que l'automatique.
+        accord = reporting.consentement()
+        if accord is not True:
+            reporting.definir_consentement(True)
+        try:
+            etat = {"grille": self.grid.board.to_string("."),
+                    "difficulte": self.current_difficulty.value,
+                    "langue": get_language()}
+        except Exception:
+            etat = {}
+        rapport = reporting.envoyer("manuel", description=description,
+                                    version=self.version, **etat)
+        if accord is not True:
+            reporting.definir_consentement(bool(accord))
+        try:
+            chemin = reporting.paquet_local(rapport, None)
+        except Exception:
+            chemin = None
+        if rapport.get("transmis", True) and chemin is None:
+            msg = T("report_sent")
+        else:
+            msg = T("report_local", path=chemin or "-")
+        QMessageBox.information(self, T("report_title"), msg)
 
     # ---- Lifecycle ----
 

@@ -20,6 +20,7 @@ from pathlib import Path
 
 PROJECT_DIR = Path(__file__).resolve().parent
 _fichier_faulthandler = None
+#: dossier des rapports JSON, fixé par install() hors du dossier du programme
 CRASH_DIR = PROJECT_DIR / "crash_reports"
 MAX_REPORTS = 50  # keep only the newest N reports
 
@@ -58,7 +59,7 @@ def _trim_old_reports() -> None:
 
 def _write_report(exc_type, exc_value, exc_tb) -> Path | None:
     try:
-        CRASH_DIR.mkdir(exist_ok=True)
+        CRASH_DIR.mkdir(parents=True, exist_ok=True)
         tb_str = "".join(traceback.format_exception(exc_type, exc_value, exc_tb))
         tb_str = _anonymize(tb_str)
         now = datetime.now().strftime("%Y-%m-%d_%H%M%S")
@@ -86,10 +87,11 @@ def _show_dialog(exc_value, report_path: Path | None) -> None:
 
         if QApplication.instance() is None:
             return
-        msg = f"An unexpected error occurred:\n\n{type(exc_value).__name__}: {exc_value}"
+        from i18n import T
+        msg = T("crash_text", error=f"{type(exc_value).__name__}: {exc_value}")
         if report_path:
-            msg += f"\n\nA crash report has been saved to:\n{report_path.name}"
-        QMessageBox.critical(None, "SudokuSolver", msg)
+            msg += "\n\n" + T("crash_saved", name=report_path.name)
+        QMessageBox.critical(None, T("app_title"), msg)
     except Exception:
         pass
 
@@ -113,15 +115,35 @@ def _excepthook(exc_type, exc_value, exc_tb) -> None:
     sys.__excepthook__(exc_type, exc_value, exc_tb)
 
 
+def empaquete() -> bool:
+    """Vrai dans le paquet autonome du kit : python/ a cote de app/.
+
+    Windows : python/python.exe ; macOS et Linux : python/bin/python3. Ne
+    tester que python.exe faisait ecrire les paquets macOS et Linux dans leur
+    propre dossier d'installation, que la mise a jour remplace.
+    """
+    py = PROJECT_DIR.parent / 'python'
+    return (py / 'python.exe').exists() or (py / 'bin' / 'python3').exists()
+
+
 def dossier_donnees() -> Path:
     """Ou vivent rapports et reglages.
 
     Dans le paquet installe, le dossier du programme peut etre en lecture
-    seule selon l'endroit choisi : on prend donc %LOCALAPPDATA%. En
-    developpement, on reste a cote du code, plus commode a inspecter.
+    seule selon l'endroit choisi, et la mise a jour le remplace en entier :
+    Windows %LOCALAPPDATA%, macOS Application Support, Linux $XDG_DATA_HOME
+    (~/.local/share). En developpement, on reste a cote du code, plus commode
+    a inspecter.
     """
-    if (PROJECT_DIR.parent / 'python' / 'python.exe').exists():
-        base = Path(os.environ.get('LOCALAPPDATA', Path.home())) / 'SudokuSolver'
+    if empaquete():
+        if sys.platform == 'win32':
+            racine = Path(os.environ.get('LOCALAPPDATA', Path.home()))
+        elif sys.platform == 'darwin':
+            racine = Path.home() / 'Library' / 'Application Support'
+        else:
+            racine = Path(os.environ.get('XDG_DATA_HOME')
+                          or Path.home() / '.local' / 'share')
+        base = racine / 'SudokuSolver'
     else:
         base = PROJECT_DIR
     try:
@@ -132,12 +154,14 @@ def dossier_donnees() -> Path:
 
 
 def install() -> None:
+    global CRASH_DIR
     sys.excepthook = _excepthook
 
     # Remontee d'incidents. Une faute de segmentation dans Qt ne passe pas par
     # excepthook : l'application disparait sans un mot. faulthandler ecrit la
     # pile avant la mort, et on la releve au demarrage suivant.
     dossier = dossier_donnees()
+    CRASH_DIR = dossier / "crash_reports"
     trace_native = dossier / '_crash_natif.log'
     try:
         import faulthandler

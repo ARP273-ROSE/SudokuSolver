@@ -6,6 +6,8 @@
 
 **A bilingual (French/English) Sudoku solver, generator and tutor — solves any puzzle, generates new ones by difficulty, and teaches you the techniques to crack them yourself.**
 
+*Version française : [README.fr.md](README.fr.md).*
+
 ---
 
 ## Features
@@ -45,13 +47,15 @@ Puzzles are generated with rotational symmetry and guaranteed unique solutions.
 - Row / column / box / same-value highlighting on selection
 - Visual hint overlay: pattern cells in green, eliminations in red
 - Mistake checker against the generated solution
-- Bilingual FR/EN (auto-detected from system locale, switchable at runtime)
+- Bilingual FR/EN: the system's language at first launch, then the one chosen in the Language menu (remembered)
 - Every widget has a bilingual tooltip
 
 ### Robustness
 - Generator and solver run in background threads — the UI never freezes
 - Worker lifecycle handled defensively (no dangling Qt references, no "wrapped C++ object deleted" errors on repeated clicks)
 - Uncaught exceptions write anonymised JSON crash reports (usernames and home paths stripped)
+- Problem reports (crash, native crash, freeze, written report via Help → Report a problem), sent only with the consent asked at first launch
+- Automatic update on Windows, macOS and Linux (Help → Check for updates, and silently at startup)
 - Solver capped at 2 million search nodes to guarantee bounded worst-case effort
 
 ### Built-in learning guide
@@ -61,13 +65,29 @@ The **Help → Solving techniques** menu opens a full bilingual catalogue explai
 
 ## Installation
 
-### Windows
+### Download (recommended)
+
+Ready-to-use packages, Python included, on the
+[Releases page](https://github.com/ARP273-ROSE/SudokuSolver/releases/latest):
+
+| System | File |
+|---|---|
+| Windows | `SudokuSolver-Setup.exe` — permanent link: [latest installer](https://github.com/ARP273-ROSE/SudokuSolver/releases/latest/download/SudokuSolver-Setup.exe) |
+| macOS (Apple Silicon / Intel) | `SudokuSolver-X.Y.Z-macos-arm64.dmg` / `-macos-x86_64.dmg` |
+| Linux (x86_64 / ARM64) | `SudokuSolver-X.Y.Z-linux-x86_64.tar.gz` / `-linux-arm64.tar.gz`, then `./installer.sh` |
+
+No administrator rights are needed. Logs and reports live outside the
+installation folder (`%LOCALAPPDATA%\SudokuSolver`, `~/Library/Application Support/SudokuSolver`,
+`~/.local/share/SudokuSolver`) and survive updates. Once installed, the
+application updates itself.
+
+### From the sources — Windows
 ```
 launch.bat
 ```
 Creates a local virtual environment in `%APPDATA%\SudokuSolver\venv`, installs dependencies on first run, and launches the app silently.
 
-### Linux / macOS
+### From the sources — Linux / macOS
 ```bash
 chmod +x launch.sh
 ./launch.sh
@@ -111,6 +131,14 @@ SudokuSolver/
 │   ├── main_window.py    # Main window + menus
 │   ├── grid_widget.py    # Interactive 9×9 grid
 │   └── help_dialog.py    # How-to-play + techniques guide
+├── crash_handler.py      # Crash reports, data folder
+├── updater.py            # Automatic update (shared kit)
+├── reporting.py          # Problem reports (shared kit)
+├── kit.json              # Packaging settings (shared kit)
+├── build_package.py      # Windows package (embedded Python)
+├── installer.iss         # Windows installer (Inno Setup)
+├── build_unix.py         # macOS / Linux packages
+├── tests/                # Engine, bilingual UI, GUI under Xvfb, privacy guard
 ├── launch.bat / launch.sh
 ├── requirements.txt
 └── VERSION

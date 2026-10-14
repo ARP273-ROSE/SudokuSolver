@@ -16,14 +16,21 @@ from typing import Dict, Tuple
 _lang = "en"
 
 
-def detect_language() -> str:
-    """Detect FR/EN from system locale.
+def detect_language(ui_languages=None) -> str:
+    """Detect FR/EN from the system.
 
-    Uses `locale.getlocale()` (the non-deprecated replacement for
-    `getdefaultlocale()`), then falls back to environment variables,
-    which works even when no locale has been set.
+    Qt's display languages first (`QLocale.system().uiLanguages()`, correct
+    on Windows, macOS and Linux), then `locale.getlocale()`, then the
+    environment variables. On Windows the Python locale reads like
+    "French_France": the comparison ignores case and accepts "french".
     """
-    candidates: list[str] = []
+    candidates: list[str] = list(ui_languages or [])
+    if ui_languages is None:
+        try:
+            from PyQt6.QtCore import QLocale
+            candidates += list(QLocale.system().uiLanguages())[:1]
+        except Exception:
+            pass
     try:
         loc = locale.getlocale()
         if loc and loc[0]:
@@ -35,9 +42,36 @@ def detect_language() -> str:
         if val:
             candidates.append(val)
     for c in candidates:
-        if c and c.lower().startswith("fr"):
-            return "fr"
+        if c:
+            return "fr" if c.lower().startswith(("fr", "french")) else "en"
     return "en"
+
+
+def _settings():
+    from PyQt6.QtCore import QSettings
+    return QSettings("ARP273-ROSE", "SudokuSolver")
+
+
+def saved_language() -> str | None:
+    """Language chosen in the Language menu, if any (kept between runs)."""
+    try:
+        value = _settings().value("lang")
+    except Exception:
+        return None
+    return value if value in ("en", "fr") else None
+
+
+def save_language(lang: str) -> None:
+    try:
+        if lang in ("en", "fr"):
+            _settings().setValue("lang", lang)
+    except Exception:
+        pass
+
+
+def startup_language() -> str:
+    """The saved choice, otherwise the system's language."""
+    return saved_language() or detect_language()
 
 
 def set_language(lang: str) -> None:
@@ -81,6 +115,96 @@ STRINGS: Dict[str, Tuple[str, str]] = {
     "menu_help_show": ("&How to play", "&Comment jouer"),
     "menu_techniques": ("Solving &techniques", "&Techniques de résolution"),
     "menu_about": ("&About", "À &propos"),
+    "menu_update": ("Check for &updates...", "Rechercher des &mises à jour..."),
+    "menu_report": ("&Report a problem...", "&Signaler un problème..."),
+    "menu_autoreport": (
+        "Send problem reports automatically",
+        "Envoyer automatiquement les rapports de problème",
+    ),
+    # Updates
+    "update_title": ("Updates", "Mises à jour"),
+    "update_checking": ("Checking for updates...", "Recherche de mises à jour..."),
+    "update_uptodate": (
+        "You are up to date (version {current}).",
+        "Vous êtes à jour (version {current}).",
+    ),
+    "update_available": (
+        "Version {version} is available (installed: {current}).",
+        "La version {version} est disponible (installée : {current}).",
+    ),
+    "update_install": ("Install and restart", "Installer et redémarrer"),
+    "update_sources": (
+        "This copy runs from the sources: download the new version from the release page.",
+        "Cette copie tourne depuis les sources : téléchargez la nouvelle version sur la page de publication.",
+    ),
+    "update_open_page": ("Open the download page", "Ouvrir la page de téléchargement"),
+    "update_later": ("Later", "Plus tard"),
+    "update_downloading": ("Downloading the update...", "Téléchargement de la mise à jour..."),
+    "update_locked": (
+        "A file of the application is in use. Close every SudokuSolver window and try again.",
+        "Un fichier de l'application est en cours d'utilisation. Fermez toutes les fenêtres de SudokuSolver et réessayez.",
+    ),
+    "update_failed": ("The update failed:\n{error}", "La mise à jour a échoué :\n{error}"),
+    "update_restart": (
+        "The update is installed. SudokuSolver will now restart.",
+        "La mise à jour est installée. SudokuSolver va redémarrer.",
+    ),
+    # Problem reports
+    "consent_title": (
+        "Send problem reports automatically?",
+        "Envoyer automatiquement les rapports de problème ?",
+    ),
+    "consent_text": (
+        "When SudokuSolver crashes or freezes, a short technical report (version, "
+        "system, error trace) can be sent so the problem gets fixed. Nothing else is "
+        "sent. You can change this at any time in the Help menu.",
+        "Quand SudokuSolver plante ou se fige, un court rapport technique (version, "
+        "système, trace de l'erreur) peut être transmis pour que le problème soit "
+        "corrigé. Rien d'autre n'est envoyé. Ce choix se modifie à tout moment dans "
+        "le menu Aide.",
+    ),
+    "consent_yes": ("Yes, send them", "Oui, les envoyer"),
+    "consent_no": ("No", "Non"),
+    "report_title": ("Report a problem", "Signaler un problème"),
+    "report_prompt": (
+        "Describe what happened and what you were doing:",
+        "Décrivez ce qui s'est passé et ce que vous faisiez :",
+    ),
+    "report_placeholder": (
+        "For example: the hint button stopped responding after...",
+        "Par exemple : le bouton Indice ne répondait plus après...",
+    ),
+    "report_note": (
+        "The report contains the version, the system and the recent log.",
+        "Le rapport contient la version, le système et le journal récent.",
+    ),
+    "report_send": ("Send", "Envoyer"),
+    "report_cancel": ("Cancel", "Annuler"),
+    "report_empty": (
+        "Nothing was sent: the description is empty.",
+        "Rien n'a été envoyé : la description est vide.",
+    ),
+    "report_sent": ("Your report has been sent. Thank you.", "Votre signalement a été transmis. Merci."),
+    "report_local": (
+        "No connection: the report was saved here:\n{path}",
+        "Pas de connexion : le signalement est enregistré ici :\n{path}",
+    ),
+    # Errors
+    "error": ("Error: {error}", "Erreur : {error}"),
+    "file_too_large": (
+        "File too large ({size} bytes). Maximum: {max} bytes.",
+        "Fichier trop volumineux ({size} octets). Maximum : {max} octets.",
+    ),
+    "file_filter_open": ("Sudoku (*.sdk *.txt);;All files (*)", "Sudoku (*.sdk *.txt);;Tous les fichiers (*)"),
+    "file_filter_save": ("Sudoku (*.sdk);;Text (*.txt)", "Sudoku (*.sdk);;Texte (*.txt)"),
+    "crash_text": (
+        "An unexpected error occurred:\n\n{error}",
+        "Une erreur inattendue s'est produite :\n\n{error}",
+    ),
+    "crash_saved": (
+        "A crash report has been saved to:\n{name}",
+        "Un rapport de plantage a été enregistré :\n{name}",
+    ),
     # Difficulty
     "difficulty": ("Difficulty", "Difficulté"),
     "difficulty_easy": ("Easy", "Facile"),

@@ -33,7 +33,18 @@
   "fichiers_proteges": [],
   "verification_import": [
     "gui",
+    "gui.main_window",
     "sudoku",
-    "i18n"
-  ]
+    "i18n",
+    "crash_handler",
+    "reporting",
+    "updater"
+  ],
+  "icone_png": "logo.png",
+  "icone_grande": "logo.png",
+  "nom_affiche_fr": "Sudoku",
+  "nom_affiche_en": "Sudoku",
+  "description_fr": "Solveur, générateur et tuteur de sudoku",
+  "description_en": "Sudoku solver, generator and tutor",
+  "categories_linux": "Game;LogicGame;"
 }
