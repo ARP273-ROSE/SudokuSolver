@@ -48,6 +48,8 @@ Puzzles are generated with rotational symmetry and guaranteed unique solutions.
 - Visual hint overlay: pattern cells in green, eliminations in red
 - Mistake checker against the generated solution
 - Bilingual FR/EN: the system's language at first launch, then the one chosen in the Language menu (remembered)
+- Fixed look: Fusion style, complete palette and embedded font, whatever the system's theme or fonts
+- Full file browser for Open/Save, including on Linux (Qt's complete dialog with the usual places)
 - Every widget has a bilingual tooltip
 
 ### Robustness
@@ -59,7 +61,7 @@ Puzzles are generated with rotational symmetry and guaranteed unique solutions.
 - Solver capped at 2 million search nodes to guarantee bounded worst-case effort
 
 ### Built-in learning guide
-The **Help → Solving techniques** menu opens a full bilingual catalogue explaining each technique with examples. A standalone **`guide_techniques.pdf`** and **`manuel.pdf`** (user manual) are shipped alongside the source.
+The **Help → Solving techniques** menu opens a full bilingual catalogue explaining each technique with examples. A standalone **`guide_techniques.pdf`** is shipped alongside the source, and the **user manual** (PDF, French and English, `docs/manuel-fr.pdf` / `docs/manuel-en.pdf`) opens from **Help → User manual** (F1).
 
 ---
 
@@ -121,7 +123,9 @@ python main.py
 SudokuSolver/
 ├── main.py               # Entry point
 ├── i18n.py               # FR/EN translation layer
-├── generate_logo.py      # Logo generator (Pillow)
+├── make_logo.py          # Logo: logo.svg (single source) → PNG 16–512, .ico, .icns
+├── polices/              # Embedded font (Source Sans 3, OFL) for the fixed look
+├── docs/                 # PDF manuals (FR/EN), real screenshots, LaTeX sources
 ├── sudoku/
 │   ├── board.py          # Grid + candidate bitmasks
 │   ├── solver.py         # Fast backtracking solver

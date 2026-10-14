@@ -88,6 +88,9 @@ def test_toutes_les_cles_existent():
     from sudoku import Difficulty
     manquantes += [f"difficulty_{d.value}" for d in Difficulty
                    if f"difficulty_{d.value}" not in i18n.STRINGS]
+    from sudoku import Technique
+    manquantes += [f"tech_{t.value}" for t in Technique
+                   if f"tech_{t.value}" not in i18n.STRINGS]
     assert not manquantes, "Clés absentes de i18n.STRINGS :\n  " + "\n  ".join(manquantes)
 
 

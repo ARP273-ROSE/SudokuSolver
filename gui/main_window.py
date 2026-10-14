@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Callable
 
 from PyQt6.QtCore import Qt, QThread, QTimer, QUrl, pyqtSignal
-from PyQt6.QtGui import QAction, QActionGroup, QDesktopServices, QIcon
+from PyQt6.QtGui import QAction, QActionGroup, QDesktopServices, QIcon, QPixmap
 from PyQt6.QtWidgets import (
     QApplication,
     QComboBox,
@@ -318,6 +318,10 @@ class MainWindow(QMainWindow):
         self.menu_lang.addAction(self.act_lang_fr)
 
         self.menu_help = mb.addMenu("")
+        self.act_manual = QAction(self)
+        self.act_manual.setShortcut("F1")
+        self.act_manual.triggered.connect(self._on_manual)
+        self.menu_help.addAction(self.act_manual)
         self.act_help_show = QAction(self)
         self.act_help_show.triggered.connect(lambda: show_howto(self))
         self.menu_help.addAction(self.act_help_show)
@@ -396,6 +400,7 @@ class MainWindow(QMainWindow):
         self.act_lang_fr.setText(T("menu_lang_fr"))
 
         self.menu_help.setTitle(T("menu_help"))
+        self.act_manual.setText(T("menu_manual"))
         self.act_help_show.setText(T("menu_help_show"))
         self.act_techniques.setText(T("menu_techniques"))
         self.act_update.setText(T("menu_update"))
@@ -474,7 +479,7 @@ class MainWindow(QMainWindow):
             self.grid.set_board(board)
             self.lbl_hint.clear()
             tech_name = (
-                gp.hardest_technique.value.replace("_", " ")
+                T(f"tech_{gp.hardest_technique.value}")
                 if gp.hardest_technique
                 else "—"
             )
@@ -685,11 +690,26 @@ class MainWindow(QMainWindow):
 
     @_guarded
     def _on_about(self) -> None:
-        QMessageBox.about(
-            self,
-            T("about_title"),
-            T("about_body", version=self.version),
-        )
+        # Le logo est le même fichier que l'icône (une seule source, logo.svg).
+        box = QMessageBox(self)
+        box.setWindowTitle(T("about_title"))
+        logo = PROJECT_DIR / "logo_128.png"
+        if logo.exists():
+            box.setIconPixmap(QPixmap(str(logo)))
+        box.setText(T("about_body", version=self.version))
+        box.exec()
+
+    @_guarded
+    def _on_manual(self) -> None:
+        """Manuel PDF dans la langue de l'interface (docs/manuel-fr.pdf,
+        docs/manuel-en.pdf), avec la visionneuse du système."""
+        try:
+            import interface_kit
+            if interface_kit.ouvrir_manuel([PROJECT_DIR / "docs"], get_language()):
+                return
+        except Exception:
+            log.exception("manual")
+        QMessageBox.information(self, T("app_title"), T("manual_missing"))
 
     # ---- Mise à jour (kit commun : updater.py) ----
     # Paquet installé (Windows, macOS, Linux) : l'archive de la Release est

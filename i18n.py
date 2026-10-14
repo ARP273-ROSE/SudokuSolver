@@ -115,6 +115,20 @@ STRINGS: Dict[str, Tuple[str, str]] = {
     "menu_help_show": ("&How to play", "&Comment jouer"),
     "menu_techniques": ("Solving &techniques", "&Techniques de résolution"),
     "menu_about": ("&About", "À &propos"),
+    "menu_manual": ("User &manual (PDF)", "&Manuel (PDF)"),
+    # Names of the techniques (status bar after generation)
+    "tech_naked_single": ("naked single", "single nu"),
+    "tech_hidden_single": ("hidden single", "single caché"),
+    "tech_naked_pair": ("naked pair", "paire nue"),
+    "tech_naked_triple": ("naked triple", "triplet nu"),
+    "tech_hidden_pair": ("hidden pair", "paire cachée"),
+    "tech_pointing": ("pointing", "pointage"),
+    "tech_box_line": ("box/line reduction", "réduction ligne/boîte"),
+    "tech_x_wing": ("X-Wing", "X-Wing"),
+    "manual_missing": (
+        "The PDF manual cannot be found in the program folder.",
+        "Le manuel PDF est introuvable dans le dossier du programme.",
+    ),
     "menu_update": ("Check for &updates...", "Rechercher des &mises à jour..."),
     "menu_report": ("&Report a problem...", "&Signaler un problème..."),
     "menu_autoreport": (

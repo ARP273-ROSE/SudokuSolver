@@ -27,6 +27,10 @@ from PyQt6.QtWidgets import QWidget
 
 from sudoku.board import Board
 
+# Police embarquée (polices/), chargée par main.py : la grille a le même
+# aspect sur toutes les machines, quelles que soient leurs polices.
+POLICE = "Source Sans 3"
+
 
 # Color palette
 COLOR_BG = QColor("#fafbfc")
@@ -185,9 +189,9 @@ class GridWidget(QWidget):
                     p.fillRect(rect, COLOR_SAME)
 
         # Digits
-        big_font = QFont("Segoe UI", max(10, int(cs * 0.45)))
+        big_font = QFont(POLICE, max(10, int(cs * 0.45)))
         big_font.setBold(True)
-        small_font = QFont("Segoe UI", max(6, int(cs * 0.18)))
+        small_font = QFont(POLICE, max(6, int(cs * 0.18)))
 
         for r in range(9):
             for c in range(9):

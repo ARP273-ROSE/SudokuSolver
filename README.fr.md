@@ -52,7 +52,9 @@ le menu *Aide*, où *Signaler un problème* permet aussi d'écrire un signalemen
   suivante** l'applique.
 - **Vérifier** compare les saisies à la solution ; **Résoudre** la donne.
 
-Guide des techniques : `guide_techniques.pdf` ; manuel : `manuel.pdf`.
+Guide des techniques : `guide_techniques.pdf`. Le **manuel** (PDF, français et anglais) s'ouvre par *Aide > Manuel (PDF)* (F1).
+
+L'apparence est figée (style Fusion, palette et police embarquées) : elle ne change pas avec le thème clair ou sombre du système. Ouvrir et Enregistrer passent par un explorateur de fichiers complet, y compris sous Linux.
 
 ## Depuis les sources
 

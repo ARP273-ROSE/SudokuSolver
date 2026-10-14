@@ -202,7 +202,7 @@ class _TextDialog(QDialog):
         browser = QTextBrowser()
         browser.setHtml(html)
         browser.setOpenExternalLinks(True)
-        f = QFont("Segoe UI", 10)
+        f = QFont("Source Sans 3", 10)
         browser.setFont(f)
         layout.addWidget(browser)
         btn_row = QHBoxLayout()

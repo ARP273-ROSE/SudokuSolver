@@ -12,7 +12,8 @@
     "i18n.py",
     "crash_handler.py",
     "reporting.py",
-    "updater.py"
+    "updater.py",
+    "interface_kit.py"
   ],
   "paquets": [
     "gui",
@@ -22,10 +23,18 @@
     "VERSION",
     "logo.ico",
     "logo.png",
+    "logo_16.png",
+    "logo_32.png",
     "logo_64.png",
+    "logo_128.png",
+    "logo_256.png",
+    "logo_512.png",
     "README.md",
+    "README.fr.md",
     "LICENSE",
-    "guide_techniques.pdf"
+    "guide_techniques.pdf",
+    "polices",
+    "docs"
   ],
   "requirements": "requirements.txt",
   "pip": [],
@@ -38,13 +47,15 @@
     "i18n",
     "crash_handler",
     "reporting",
-    "updater"
+    "updater",
+    "interface_kit"
   ],
-  "icone_png": "logo.png",
-  "icone_grande": "logo.png",
+  "icone_png": "logo_256.png",
+  "icone_grande": "logo_512.png",
   "nom_affiche_fr": "Sudoku",
   "nom_affiche_en": "Sudoku",
   "description_fr": "Solveur, générateur et tuteur de sudoku",
   "description_en": "Sudoku solver, generator and tutor",
-  "categories_linux": "Game;LogicGame;"
+  "categories_linux": "Game;LogicGame;",
+  "icone_icns": "logo.icns"
 }

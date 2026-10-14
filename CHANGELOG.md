@@ -1,5 +1,23 @@
 # Changelog
 
+## 1.3.0 — 14 octobre 2026
+
+- **Apparence figée** : style Fusion, palette complète (états désactivés compris) et police
+  Source Sans 3 embarquée (`polices/`, licence OFL) — l'interface ne change plus avec le thème
+  clair/sombre ni avec les polices du système ; la grille utilise la même police.
+- **Vrai explorateur de fichiers** pour Ouvrir et Enregistrer sous Linux : boîte Qt complète
+  (barre latérale avec dossier personnel, Bureau, Documents, supports montés…) au lieu de la
+  boîte réduite du portail ; Windows et macOS gardent la leur (`interface_kit.py`, kit commun).
+- **Manuel PDF** français et anglais au format maison, avec captures réelles, ouvert par
+  *Aide > Manuel (PDF)* (F1) ; sources `docs/src/`, captures `docs/captures.py`, compilation
+  `docs/src/compiler.py`. Il remplace l'ancien `manuel.pdf` bilingue, dont les passages sur
+  l'installation, les réglages et les rapports étaient périmés.
+- **Logo** : une seule source, `logo.svg`, rendue par `make_logo.py` en PNG 16 à 512, `.ico`
+  (Windows) et `.icns` (macOS) ; affiché dans *À propos* et sur la couverture du manuel.
+  `generate_logo.py` (Pillow) est retiré.
+- Le nom de la technique la plus difficile, dans la barre d'état, est traduit.
+- Tests : vrai démarrage du programme, style figé, présence des manuels, clés des techniques.
+
 ## 1.2.0 — 14 octobre 2026
 
 - **macOS et Linux** : image disque `.dmg` (Apple Silicon et Intel) et archive `.tar.gz`

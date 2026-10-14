@@ -17,6 +17,16 @@ from PyQt6.QtWidgets import QApplication  # noqa: E402
 from gui.main_window import MainWindow  # noqa: E402
 
 
+#: palette claire de l'application (rôles complétés par interface_kit)
+COULEURS = {
+    "fenetre": "#eef2f8", "texte": "#1a2433", "base": "#ffffff",
+    "base_alt": "#f4f7fc", "bouton": "#e3e9f3", "texte_bouton": "#1a2433",
+    "selection": "#2e5a88", "texte_selection": "#ffffff", "lien": "#1c6db4",
+    "infobulle": "#fffdf3", "texte_infobulle": "#1a2433", "desactive": "#8a94a6",
+    "clair": "#ffffff", "moyen": "#b8c3d4", "sombre": "#7d8798",
+}
+
+
 def _verifier() -> int:
     """--check : l'application et ses dépendances se chargent-elles ?
 
@@ -29,6 +39,7 @@ def _verifier() -> int:
         import i18n  # noqa: F401
         import reporting  # noqa: F401
         import updater  # noqa: F401
+        import interface_kit  # noqa: F401
         from sudoku import Generator, Solver  # noqa: F401
         app = QApplication.instance() or QApplication(sys.argv[:1])
         del app
@@ -58,6 +69,18 @@ def main() -> int:
                 None, False, "SudokuSolverEnCours")
         except Exception:
             pass
+
+    # Apparence FIGÉE : Fusion, palette complète et police embarquée, quel
+    # que soit le thème (clair/sombre) ou les polices du système ; sous Linux,
+    # vraies boîtes de fichiers complètes (interface_kit, kit commun).
+    try:
+        import interface_kit
+        interface_kit.appliquer_style(
+            app, COULEURS, polices=Path(__file__).resolve().parent / "polices",
+            famille="Source Sans 3", taille=10)
+        interface_kit.installer_dialogues_fichiers()
+    except Exception:
+        app.setStyle("Fusion")
 
     icon_path = Path(__file__).resolve().parent / "logo.png"
     if icon_path.exists():

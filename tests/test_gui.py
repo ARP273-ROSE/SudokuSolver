@@ -99,3 +99,36 @@ def test_check_en_ligne_de_commande():
                        capture_output=True, text=True, timeout=120,
                        env={**os.environ, 'QT_QPA_PLATFORM': 'offscreen'})
     assert r.returncode == 0, r.stdout + r.stderr
+
+
+def test_le_programme_demarre_vraiment():
+    """Lance le vrai point d'entrée quelques secondes : main() entier (style
+    figé, verrou, accord différé, vigie) doit tourner sans exception."""
+    import subprocess
+    env = {**os.environ, 'HOME': _TMP}
+    try:
+        r = subprocess.run([sys.executable, '-B', str(RACINE / 'main.py')],
+                           capture_output=True, text=True, timeout=8, env=env)
+        sortie = r.stdout + r.stderr
+        assert r.returncode == 0, sortie
+    except subprocess.TimeoutExpired as e:
+        sortie = (e.stdout or b'').decode() + (e.stderr or b'').decode()
+    assert 'Traceback' not in sortie, sortie
+
+
+def test_style_fige_et_police_embarquee():
+    import interface_kit
+    import main as programme
+    from PyQt6.QtGui import QPalette
+    famille = interface_kit.appliquer_style(APP, programme.COULEURS,
+                                            polices=RACINE / 'polices', famille='Source Sans 3')
+    assert famille == 'Source Sans 3'
+    assert APP.style().name().lower() == 'fusion'
+    p = APP.palette()
+    assert p.color(QPalette.ColorGroup.Active, QPalette.ColorRole.Window).name() == '#eef2f8'
+    assert p.color(QPalette.ColorGroup.Disabled, QPalette.ColorRole.Text).name() == '#8a94a6'
+
+
+def test_manuels_pdf_presents():
+    for lg in ('fr', 'en'):
+        assert (RACINE / 'docs' / f'manuel-{lg}.pdf').stat().st_size > 50_000
