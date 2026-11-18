@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.3.1 — 18 novembre 2026
+
+- **Mises à jour signées** : chaque version publie un manifeste (numéro de version et empreinte
+  SHA-256 de chaque archive) signé par une clé Ed25519 qui n'est pas sur GitHub ; l'application
+  n'installe plus une mise à jour que si son archive y figure. Un accès GitHub volé ne peut plus
+  pousser de code sur les postes installés.
+- **Kit commun reposé** à son niveau courant : vérification des empreintes SHA256SUMS et de
+  l'archive avant extraction, adresse vérifiée après les redirections, certificats de la
+  distribution sous Linux, rapports d'incident à jour.
+
 ## 1.3.0 — 14 octobre 2026
 
 - **Apparence figée** : style Fusion, palette complète (états désactivés compris) et police
